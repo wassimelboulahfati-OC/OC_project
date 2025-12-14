@@ -9,11 +9,11 @@ db = client["healthcareDB"]
 patients = db["patients"]
 logs = db["import_logs"]
 
-# Dossier source
+# Dossier source (ajouter le commentaire pour expiquer que c'en dur seulement pour la phase dev)
 folder = r"C:\Users\33767\Downloads\healthcare_dataset.csv"
 liste_csv = os.listdir(folder)
 
-# Colonnes attendues
+# Colonnes attendues pour préparer les tests
 expected_columns = [
     "Name","Age","Gender","Blood Type","Medical Condition","Date of Admission",
     "Doctor","Hospital","Insurance Provider","Billing Amount","Room Number",
@@ -21,7 +21,25 @@ expected_columns = [
 ]
 
 # --- Vérifications d’intégrité ---
-def run_integrity_tests(df):
+def run_integrity_tests(df: pd.DataFrame) -> dict:
+    """
+    Exécute une série de tests d'intégrité sur un DataFrame de patients.
+
+    Paramètres
+    ----------
+    df : pd.DataFrame
+        Le DataFrame contenant les données du fichier CSV.
+
+    Retour
+    ------
+    dict
+        Un dictionnaire contenant :
+        - missing_columns : liste des colonnes manquantes par rapport à expected_columns
+        - age_numeric : booléen indiquant si la colonne Age est numérique
+        - billing_numeric : booléen indiquant si la colonne Billing Amount est numérique
+        - duplicates : nombre de lignes dupliquées
+        - missing_values : nombre total de valeurs manquantes
+    """
     results = {}
     missing_cols = [col for col in expected_columns if col not in df.columns]
     results["missing_columns"] = missing_cols
@@ -32,7 +50,24 @@ def run_integrity_tests(df):
     return results
 
 # --- Lecture et ingestion ---
-def read_csv(liste_csv:list):
+def read_csv(liste_csv: list) -> None:
+    """
+    Lit et traite une liste de fichiers CSV contenant des données patients.
+    Implémente la logique SCD Type 2 :
+    - Insère les nouvelles lignes avec status="Current"
+    - Met à jour les lignes existantes en les marquant "Expired" et en insérant une nouvelle version "Current"
+
+    Paramètres
+    ----------
+    liste_csv : list
+        Liste des noms de fichiers CSV à traiter dans le dossier défini par `folder`.
+
+    Effets
+    ------
+    - Insère ou met à jour des documents dans la collection MongoDB `patients`.
+    - Enregistre les résultats et erreurs dans la collection `logs`.
+    - Affiche des messages de statut pour suivre l'exécution.
+    """
     for file in liste_csv:
         print(f"\n=== Début traitement du fichier: {file} ===")
 
