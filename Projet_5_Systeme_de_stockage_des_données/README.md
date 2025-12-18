@@ -10,7 +10,8 @@ Il inclut la configuration Docker, la migration des données, la visualisation v
 - **Docker Desktop** (Windows/Mac/Linux) → [Télécharger Docker](https://www.docker.com/products/docker-desktop) 
 - **Docker Compose** (inclus dans Docker Desktop) 
 - **MongoDB Compass** → [Télécharger Compass](https://www.mongodb.com/products/compass) 
-- **Git** (optionnel, pour cloner le projet) - **Python 3.12** (optionnel, uniquement si vous voulez tester le script en dehors de Docker) 
+- **Git** (optionnel, pour cloner le projet) 
+- **Python 3.12** (optionnel, uniquement si vous voulez tester le script en dehors de Docker) 
 
 ---
 
