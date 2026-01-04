@@ -1,0 +1,11 @@
+Name,Age,Gender,Blood Type,Medical Condition,Date of Admission,Doctor,Hospital,Insurance Provider,Billing Amount,Room Number,Admission Type,Discharge Date,Medication,Test Results
+Alice Smith,34,Female,A+,Diabetes,2023-01-10,Dr. Brown,Central Hospital,AXA,1200,101,Emergency,2023-01-15,Metformin,Normal
+Bob Johnson,45,Male,O-,Hypertension,2023-01-12,Dr. Green,Central Hospital,Allianz,1500,102,Elective,2023-01-20,Lisinopril,High BP
+Charlie Lee,29,Male,B+,Asthma,2023-01-14,Dr. White,City Clinic,AXA,800,103,Emergency,2023-01-18,Salbutamol,Normal
+Diana Prince,50,Female,AB-,Cancer,2023-01-16,Dr. Grey,Central Hospital,Generali,5000,104,Elective,2023-02-01,Chemotherapy,Abnormal
+Ethan Hunt,38,Male,A-,Fracture,2023-01-18,Dr. Black,City Clinic,AXA,2000,105,Emergency,2023-01-25,Painkillers,Normal
+Fiona Davis,27,Female,O+,Pregnancy,2023-01-20,Dr. Brown,Central Hospital,Allianz,3000,106,Elective,2023-02-05,Folic Acid,Normal
+George King,60,Male,B-,Heart Disease,2023-01-22,Dr. Green,Central Hospital,AXA,7000,107,Emergency,2023-02-10,Aspirin,Abnormal
+Hannah Scott,33,Female,A+,Migraine,2023-01-24,Dr. White,City Clinic,Generali,900,108,Elective,2023-01-28,Ibuprofen,Normal
+Ian Moore,41,Male,O-,Kidney Stones,2023-01-26,Dr. Grey,Central Hospital,AXA,2500,109,Emergency,2023-02-02,Tamsulosin,Normal
+Julia Clark,36,Female,B+,Flu,2023-01-28,Dr. Black,City Clinic,Allianz,400,110,Emergency,2023-01-30,Paracetamol,Normal

@@ -5,10 +5,14 @@ from datetime import datetime
 
 # --- Connexion MongoDB et configuration des chemins ---
 # On récupère les variables d'environnement définies dans docker-compose.yml
-mongo_uri = os.getenv("MONGO_URI", "mongodb://localhost:27017/healthcareDB")
+
+mongo_uri = os.getenv("MONGO_URI")
+if not mongo_uri:
+    raise ValueError("La variable d'environnement MONGO_URI n'est pas définie.")
+
 csv_path = os.getenv("CSV_PATH", "/app/data")
 
-# Connexion MongoDB
+# Connexion MongoDB sécurisée
 client = MongoClient(mongo_uri)
 db = client["healthcareDB"]
 patients = db["patients"]

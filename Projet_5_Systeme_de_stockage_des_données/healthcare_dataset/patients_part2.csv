@@ -1,0 +1,11 @@
+Name,Age,Gender,Blood Type,Medical Condition,Date of Admission,Doctor,Hospital,Insurance Provider,Billing Amount,Room Number,Admission Type,Discharge Date,Medication,Test Results
+Alice Smith,35,Female,A+,Diabetes,2023-01-10,Dr. Brown,Central Hospital,AXA,1300,201,Emergency,2023-01-15,Insulin,Normal
+Bob Johnson,46,Male,O-,Hypertension,2023-01-12,Dr. Green,Central Hospital,Allianz,1600,202,Elective,2023-01-20,Amlodipine,High BP
+Charlie Lee,30,Male,B+,Asthma,2023-01-14,Dr. White,City Clinic,AXA,900,203,Emergency,2023-01-18,Montelukast,Normal
+Diana Prince,51,Female,AB-,Cancer,2023-01-16,Dr. Grey,Central Hospital,Generali,5200,204,Elective,2023-02-01,Radiotherapy,Abnormal
+Ethan Hunt,39,Male,A-,Fracture,2023-01-18,Dr. Black,City Clinic,AXA,2100,205,Emergency,2023-01-25,Physiotherapy,Normal
+Laura White,28,Female,O-,Appendicitis,2023-02-03,Dr. Green,City Clinic,AXA,3500,206,Emergency,2023-02-10,Surgery,Normal
+Mark Evans,47,Male,A+,Diabetes,2023-02-05,Dr. Grey,Central Hospital,Allianz,2000,207,Elective,2023-02-12,Insulin,Normal
+Nina Brown,32,Female,B-,Asthma,2023-02-07,Dr. Black,City Clinic,AXA,1200,208,Emergency,2023-02-11,Salbutamol,Normal
+Oscar Hill,39,Male,O+,Fracture,2023-02-09,Dr. White,Central Hospital,Generali,2500,209,Emergency,2023-02-16,Painkillers,Normal
+Paula Reed,44,Female,A-,Hypertension,2023-02-11,Dr. Brown,City Clinic,AXA,1800,210,Elective,2023-02-18,Lisinopril,High BP

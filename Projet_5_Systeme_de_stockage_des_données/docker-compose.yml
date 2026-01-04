@@ -4,22 +4,47 @@ services:
   mongo:
     image: mongo:6.0
     container_name: mongo_db
+
     ports:
-      - "27018:27017"   # Mappe le port 27017 du conteneur sur le port 27018 de l’hôte afin d’éviter les conflits avec d’autres instances locales de MongoDB
+      - "27018:27017"   # Expose MongoDB sur le port 27018 de l’hôte
+
     volumes:
-      - mongo_data:/data/db   # Définit un volume persistant pour stocker les données MongoDB et garantir leur conservation entre les redémarrages
+      - mongo_data:/data/db   # Volume persistant pour conserver les données MongoDB
+
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}
+
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+    networks:
+      - data_pipeline_network
 
   migration:
-    build: .   # Construit l’image Docker à partir du Dockerfile situé dans le répertoire courant
+    build: .
     container_name: migration_script
+
     depends_on:
-      - mongo   # Spécifie que ce service dépend de MongoDB et attend son démarrage avant exécution
+      mongo:
+        condition: service_healthy
+
     volumes:
-      - C:/Users/33767/Downloads/healthcare_dataset.csv:/app/data   # Monte le dossier local contenant les fichiers CSV dans le répertoire /app/data du conteneur
+      - ./healthcare_dataset:/app/data
+
     environment:
-      - MONGO_URI=mongodb://mongo:27017/healthcareDB   # URI de connexion au service MongoDB défini dans ce docker-compose
-      - CSV_PATH=/app/data   # Chemin interne où le script de migration doit rechercher les fichiers CSV
+      - MONGO_URI=${MONGO_URI}
+      - CSV_PATH=/app/data
+
+    networks:
+      - data_pipeline_network
 
 volumes:
-  mongo_data:   # Déclare le volume persistant utilisé par le service MongoDB
+  mongo_data:
 
+networks:
+  data_pipeline_network:
+    driver: bridge
