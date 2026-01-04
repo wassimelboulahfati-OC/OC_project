@@ -12,39 +12,39 @@ services:
       - mongo_data:/data/db   # Volume persistant pour conserver les données MongoDB
 
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USERNAME}
-      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USERNAME}   # Nom d’utilisateur root
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}   # Mot de passe root
 
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]   # Vérifie que Mongo répond
+      interval: 5s     # Intervalle entre les checks
+      timeout: 5s      # Timeout d’un check
+      retries: 10      # Nombre de tentatives avant échec
 
     networks:
-      - data_pipeline_network
+      - data_pipeline_network   # Réseau Docker partagé
 
   migration:
-    build: .
+    build: .   # Build l’image Docker à partir du Dockerfile local
     container_name: migration_script
 
     depends_on:
       mongo:
-        condition: service_healthy
+        condition: service_healthy   # Attend que Mongo soit prêt avant d’exécuter le script
 
     volumes:
-      - ./healthcare_dataset:/app/data
+      - ./healthcare_dataset:/app/data   # Monte le dossier contenant les CSV
 
     environment:
-      - MONGO_URI=${MONGO_URI}
-      - CSV_PATH=/app/data
+      - MONGO_URI=${MONGO_URI}   # URI MongoDB injectée depuis .env
+      - CSV_PATH=/app/data       # Chemin des fichiers CSV dans le conteneur
 
     networks:
       - data_pipeline_network
 
 volumes:
-  mongo_data:
+  mongo_data:   # Volume persistant pour MongoDB
 
 networks:
   data_pipeline_network:
-    driver: bridge
+    driver: bridge   # Réseau Docker en mode bridge
