@@ -1,0 +1,18 @@
+name: siteeui_xgb
+version: lpob3ux54klsqasc
+module: bentoml.xgboost
+labels: {}
+options:
+  model_class: XGBRegressor
+metadata: {}
+context:
+  framework_name: xgboost
+  framework_versions:
+    xgboost: 3.1.3
+  bentoml_version: 1.4.34
+  python_version: 3.12.12
+signatures:
+  predict:
+    batchable: false
+api_version: v2
+creation_time: '2026-01-30T13:48:29.407887+00:00'

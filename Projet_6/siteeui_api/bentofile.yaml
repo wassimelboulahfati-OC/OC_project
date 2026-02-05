@@ -1,0 +1,15 @@
+service: "service:svc"
+
+include:
+  - "service.py"
+
+python:
+  packages:
+    - xgboost
+    - pandas
+    - scikit-learn
+    - pydantic
+    - bentoml
+
+models:
+  - "siteeui_xgb:latest"
