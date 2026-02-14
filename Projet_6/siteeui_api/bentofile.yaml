@@ -1,15 +1,21 @@
-service: "service:svc"
+service: "siteeui_service:svc"
+
+labels:
+  owner: "wassim"
+  project: "siteeui_api"
 
 include:
-  - "service.py"
+  - "siteeui_service.py"
+  - "siteeui_xgb.json"
+  - "X_final_cleaned_encoded.csv"
 
 python:
   packages:
-    - xgboost
-    - pandas
-    - scikit-learn
-    - pydantic
-    - bentoml
+    - bentoml==1.3.5
+    - xgboost==1.7.6
+    - pandas==2.1.4
+    - numpy==1.26.4
+    - scikit-learn==1.3.2
 
-models:
-  - "siteeui_xgb:latest"
+docker:
+  python_version: "3.10"
