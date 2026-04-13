@@ -468,3 +468,34 @@ if __name__ == "__main__":
     print(f"Traitement terminé - {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"CSV générés dans: {os.path.abspath(output_dir)}")
     print(f"Logs dans: {os.path.abspath(log_dir)}")
+
+    # --- COPIE VERS AIRBYTE (node kind) ---
+    print(f"\n{'='*60}")
+    print("Copie des CSV vers Airbyte (node kind)...")
+    import subprocess
+    csv_files = [
+        "infoclimat.csv",
+        "weather_underground_wu_la_madeleine.csv",
+        "weather_underground_wu_ichtegem.csv",
+    ]
+    airbyte_node = "airbyte-abctl-control-plane"
+    airbyte_dest = "/local/"
+    all_ok = True
+    for csv_file in csv_files:
+        src = os.path.join(os.path.abspath(output_dir), csv_file)
+        if not os.path.exists(src):
+            print(f"  IGNORÉ (fichier absent): {csv_file}")
+            continue
+        result = subprocess.run(
+            ["docker", "cp", src, f"{airbyte_node}:{airbyte_dest}"],
+            capture_output=True, text=True
+        )
+        if result.returncode == 0:
+            print(f"  OK: {csv_file} copié vers {airbyte_node}:{airbyte_dest}")
+        else:
+            print(f"  ERREUR copie {csv_file}: {result.stderr.strip()}")
+            all_ok = False
+    if all_ok:
+        print("Copie Airbyte terminée avec succès.")
+    else:
+        print("Copie Airbyte terminée avec des erreurs (Docker en cours d'exécution ?)")
