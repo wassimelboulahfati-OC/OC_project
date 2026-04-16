@@ -1,4 +1,14 @@
-{{ config(materialized='table') }}
+{{ config(
+    materialized='table',
+    indexes=[
+        {'columns': ['observation_id'], 'unique': True,  'type': 'btree'},
+        {'columns': ['station_id'],                      'type': 'btree'},
+        {'columns': ['observed_at'],                     'type': 'btree'},
+        {'columns': ['observation_date'],                'type': 'btree'},
+        {'columns': ['station_id', 'observed_at'],       'type': 'btree'},
+        {'columns': ['station_id', 'observation_date'],  'type': 'btree'},
+    ]
+) }}
 
 with observations as (
     select * from {{ ref('int_weather_observations') }}

@@ -1,4 +1,11 @@
-{{ config(materialized='table') }}
+{{ config(
+    materialized='table',
+    indexes=[
+        {'columns': ['station_id'], 'unique': True, 'type': 'btree'},
+        {'columns': ['source_system'],                   'type': 'btree'},
+        {'columns': ['country'],                         'type': 'btree'},
+    ]
+) }}
 
 select
     station_id,
