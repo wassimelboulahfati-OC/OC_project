@@ -479,7 +479,7 @@ if __name__ == "__main__":
         "weather_underground_wu_ichtegem.csv",
     ]
     airbyte_node = "airbyte-abctl-control-plane"
-    airbyte_dest = "/local/"
+    airbyte_dest = "/var/local-path-provisioner/airbyte-local-pv/"
     all_ok = True
     for csv_file in csv_files:
         src = os.path.join(os.path.abspath(output_dir), csv_file)
