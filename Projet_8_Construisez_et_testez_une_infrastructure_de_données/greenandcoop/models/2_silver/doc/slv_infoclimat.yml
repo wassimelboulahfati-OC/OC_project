@@ -1,0 +1,73 @@
+version: 2
+
+models:
+  - name: slv_infoclimat
+    description: >
+      Modèle Silver issu de brz_infoclimat_v1. Standardise les noms de colonnes,
+      caste dh_utc en timestamp et aligne le schéma avec les sources WU
+      (colonnes absentes remplies à null).
+
+    columns:
+      - name: station_id
+        description: "Identifiant de la station météorologique (ex: 07015)."
+        tests:
+          - not_null
+
+      - name: observed_at
+        description: "Horodatage de l'observation (UTC)."
+        tests:
+          - not_null
+
+      - name: source_system
+        description: "Système source de la donnée (valeur: infoclimat)."
+
+      - name: temperature_c
+        description: "Température de l'air en °C."
+
+      - name: pressure_hpa
+        description: "Pression atmosphérique en hPa."
+
+      - name: humidity_pct
+        description: "Humidité relative en %."
+
+      - name: dew_point_c
+        description: "Température du point de rosée en °C."
+
+      - name: wind_speed_kmh
+        description: "Vitesse moyenne du vent en km/h."
+
+      - name: wind_gust_kmh
+        description: "Vitesse des rafales en km/h."
+
+      - name: wind_direction_deg
+        description: "Direction du vent en degrés (0-360)."
+
+      - name: precip_rate_mmh
+        description: "Intensité des précipitations sur 1h en mm/h."
+
+      - name: precip_accum_3h_mm
+        description: "Cumul des précipitations sur 3h en mm."
+
+      - name: visibility_m
+        description: "Visibilité horizontale en mètres."
+
+      - name: cloud_cover_oktas
+        description: "Couverture nuageuse en octas."
+
+      - name: snow_ground_cm
+        description: "Hauteur de neige au sol en cm."
+
+      - name: weather_code_omm
+        description: "Code météo OMM (temps présent)."
+
+      - name: wind_direction_text
+        description: "Direction du vent en texte (null pour infoclimat)."
+
+      - name: precip_accum_mm
+        description: "Cumul total de précipitations en mm (null pour infoclimat)."
+
+      - name: uv_index
+        description: "Indice UV (null pour infoclimat)."
+
+      - name: solar_radiation_wm2
+        description: "Rayonnement solaire en W/m² (null pour infoclimat)."

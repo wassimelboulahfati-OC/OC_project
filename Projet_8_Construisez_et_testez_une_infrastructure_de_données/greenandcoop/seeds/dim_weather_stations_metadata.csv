@@ -1,0 +1,7 @@
+station_id,station_name,latitude,longitude,elevation_m,city,country,hardware,software,source_system
+WU_LA_MADELEINE,La Madeleine,50.659,3.07,23,La Madeleine,FR,other,EasyWeatherPro_V5.1.6,weather_underground
+WU_ICHTEGEM,WeerstationBS,51.092,2.999,15,Ichtegem,BE,other,EasyWeatherV1.6.6,weather_underground
+07015,Lille-Lesquin,50.567,3.103,47,Lille,FR,SYNOP,,infoclimat
+00052,Station Infoclimat 00052,,,,,FR,,,infoclimat
+000R5,Station Infoclimat 000R5,,,,,FR,,,infoclimat
+STATIC0010,Station Infoclimat STATIC0010,,,,,FR,,,infoclimat

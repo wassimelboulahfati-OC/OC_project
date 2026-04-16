@@ -34,3 +34,12 @@ models:
     "1_bronze":
       +materialized: view
       +schema: bronze
+    "2_silver":
+      +materialized: view
+      +schema: silver
+    "3_gold":
+      +materialized: view
+      +schema: gold
+    "4_datamart":
+      +materialized: table
+      +schema: datamart
