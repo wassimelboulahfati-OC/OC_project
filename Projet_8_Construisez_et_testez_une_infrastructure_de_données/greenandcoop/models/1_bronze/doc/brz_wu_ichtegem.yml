@@ -1,0 +1,80 @@
+version: 2
+
+models:
+  - name: brz_wu_ichtegem
+    latest_version: 1
+    description: >
+      Modèle Bronze des observations météo issues de la station Weather Underground d'Ichtegem (Belgique).
+    config:
+      tags: base
+      contract: {enforced: true}
+
+    columns:
+      - name: id_station
+        description: "Identifiant unique de la station météorologique."
+        data_type: character varying
+        tests:
+          - not_null
+
+      - name: dh_utc
+        description: "Date et heure de l'observation en UTC."
+        data_type: character varying
+        tests:
+          - not_null
+
+      - name: date
+        description: "Date de l'observation (format texte selon la source)."
+        data_type: character varying
+
+      - name: time
+        description: "Heure locale de l'observation (format texte selon la source)."
+        data_type: character varying
+
+      - name: temperature
+        description: "Température de l'air au moment de l'observation."
+        data_type: character varying
+
+      - name: dew_point
+        description: "Température du point de rosée."
+        data_type: character varying
+
+      - name: humidity
+        description: "Humidité relative de l'air en pourcentage."
+        data_type: character varying
+
+      - name: wind
+        description: "Direction du vent (texte ou code)."
+        data_type: character varying
+
+      - name: speed
+        description: "Vitesse moyenne du vent."
+        data_type: character varying
+
+      - name: gust
+        description: "Vitesse des rafales de vent."
+        data_type: character varying
+
+      - name: pressure
+        description: "Pression atmosphérique."
+        data_type: character varying
+
+      - name: precip__rate_
+        description: "Taux de précipitations (intensité instantanée)."
+        data_type: character varying
+
+      - name: precip__accum_
+        description: "Cumul de précipitations."
+        data_type: character varying
+
+      - name: uv
+        description: "Indice UV."
+        data_type: numeric
+
+      - name: solar
+        description: "Rayonnement solaire."
+        data_type: character varying
+
+    versions:
+      - v: 1
+        columns:
+          - include: all

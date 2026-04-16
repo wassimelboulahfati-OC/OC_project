@@ -1,0 +1,80 @@
+version: 2
+
+models:
+  - name: brz_infoclimat
+    latest_version: 1
+    description: >
+      Modèle Bronze des observations météo issues de la source brute `raw_weather.infoclimat_raw`.
+    config:
+      tags: base
+      contract: {enforced: true}
+
+    columns:
+      - name: id_station
+        description: "Identifiant unique de la station météorologique."
+        data_type: character varying
+        tests:
+          - not_null
+
+      - name: dh_utc
+        description: "Date et heure de l'observation en UTC."
+        data_type: character varying
+        tests:
+          - not_null
+
+      - name: temperature
+        description: "Température de l'air au moment de l'observation (unité selon la source)."
+        data_type: numeric
+
+      - name: pression
+        description: "Pression atmosphérique (unité selon la source)."
+        data_type: numeric
+
+      - name: humidite
+        description: "Humidité relative de l'air en pourcentage."
+        data_type: numeric
+
+      - name: point_de_rosee
+        description: "Température du point de rosée (unité selon la source)."
+        data_type: numeric
+
+      - name: visibilite
+        description: "Visibilité horizontale (unité selon la source)."
+        data_type: numeric
+
+      - name: vent_moyen
+        description: "Vitesse moyenne du vent (unité selon la source)."
+        data_type: numeric
+
+      - name: vent_rafales
+        description: "Vitesse des rafales de vent (unité selon la source)."
+        data_type: numeric
+
+      - name: vent_direction
+        description: "Direction du vent en degrés (0-360)."
+        data_type: numeric
+
+      - name: pluie_1h
+        description: "Cumul de pluie sur 1 heure (unité selon la source)."
+        data_type: numeric
+
+      - name: pluie_3h
+        description: "Cumul de pluie sur 3 heures (unité selon la source)."
+        data_type: numeric
+
+      - name: neige_au_sol
+        description: "Hauteur ou présence de neige au sol (format/unité selon la source)."
+        data_type: numeric
+
+      - name: nebulosite
+        description: "Nébulosité (couverture nuageuse, format selon la source)."
+        data_type: numeric
+
+      - name: temps_omm
+        description: "Code temps OMM (Organisation météorologique mondiale)."
+        data_type: numeric
+
+    versions:
+      - v: 1
+        columns:
+          - include: all
