@@ -31,15 +31,15 @@ clean-targets:         # directories to be removed by `dbt clean`
 # files using the `{{ config(...) }}` macro.
 models:
   greenandcoop:
-    "1_bronze":
+    1_bronze:
       +materialized: view
       +schema: bronze
-    "2_silver":
+    2_silver:
       +materialized: view
       +schema: silver
-    "3_gold":
+    3_gold:
       +materialized: view
       +schema: gold
-    "4_datamart":
+    4_datamart:
       +materialized: table
       +schema: datamart
