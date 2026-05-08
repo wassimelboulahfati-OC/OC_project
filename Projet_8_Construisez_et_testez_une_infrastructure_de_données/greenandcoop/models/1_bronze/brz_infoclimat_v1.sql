@@ -1,6 +1,6 @@
 with source as (
 
-  select * from {{ source('raw_weather', 'infoclimat_raw') }}
+  select * from {{ source('raw_weather', 'infoclimat') }}
 
 ),
 

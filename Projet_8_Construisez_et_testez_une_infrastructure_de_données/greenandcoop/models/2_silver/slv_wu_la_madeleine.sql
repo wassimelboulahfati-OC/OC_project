@@ -42,7 +42,7 @@ select
                                                                                             as precip_accum_mm,
     null::numeric                                                                           as precip_accum_3h_mm,
 
-    uv                                                                                      as uv_index,
+    uv::numeric                                                                                      as uv_index,
     nullif(regexp_replace(solar, '[^0-9.-]', '', 'g'), '')::numeric                        as solar_radiation_wm2,
 
     -- Colonnes infoclimat absentes

@@ -24,55 +24,55 @@ models:
 
       - name: temperature
         description: "Température de l'air au moment de l'observation (unité selon la source)."
-        data_type: numeric
+        data_type: text
 
       - name: pression
         description: "Pression atmosphérique (unité selon la source)."
-        data_type: numeric
+        data_type: text
 
       - name: humidite
         description: "Humidité relative de l'air en pourcentage."
-        data_type: numeric
+        data_type: text
 
       - name: point_de_rosee
         description: "Température du point de rosée (unité selon la source)."
-        data_type: numeric
+        data_type: text
 
       - name: visibilite
         description: "Visibilité horizontale (unité selon la source)."
-        data_type: numeric
+        data_type: text
 
       - name: vent_moyen
         description: "Vitesse moyenne du vent (unité selon la source)."
-        data_type: numeric
+        data_type: text
 
       - name: vent_rafales
         description: "Vitesse des rafales de vent (unité selon la source)."
-        data_type: numeric
+        data_type: text
 
       - name: vent_direction
         description: "Direction du vent en degrés (0-360)."
-        data_type: numeric
+        data_type: text
 
       - name: pluie_1h
         description: "Cumul de pluie sur 1 heure (unité selon la source)."
-        data_type: numeric
+        data_type: text
 
       - name: pluie_3h
         description: "Cumul de pluie sur 3 heures (unité selon la source)."
-        data_type: numeric
+        data_type: text
 
       - name: neige_au_sol
         description: "Hauteur ou présence de neige au sol (format/unité selon la source)."
-        data_type: numeric
+        data_type: text
 
       - name: nebulosite
         description: "Nébulosité (couverture nuageuse, format selon la source)."
-        data_type: numeric
+        data_type: text
 
       - name: temps_omm
         description: "Code temps OMM (Organisation météorologique mondiale)."
-        data_type: numeric
+        data_type: text
 
     versions:
       - v: 1

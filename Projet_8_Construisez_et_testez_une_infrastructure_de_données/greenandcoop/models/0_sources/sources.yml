@@ -6,9 +6,9 @@ sources:
     schema: public
     description: "Données météorologiques brutes ingérées par Airbyte"
     tables:
-      - name: infoclimat_raw
+      - name: infoclimat
         description: "Mesures horaires InfoClimat (Armentières, Bergues, Lille-Lesquin, Hazebrouck)"
-      - name: wu_ichtegem_raw
+      - name: weather_underground_ichtegem
         description: "Mesures Weather Underground - station Ichtegem, Belgique"
-      - name: wu_la_madeleine_raw
+      - name: weather_underground_la_madeleine
         description: "Mesures Weather Underground - station La Madeleine, France"
