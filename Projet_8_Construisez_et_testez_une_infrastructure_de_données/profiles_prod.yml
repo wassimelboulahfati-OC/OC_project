@@ -1,0 +1,12 @@
+greenandcoop:
+  target: prod
+  outputs:
+    prod:
+      type: postgres
+      host: greenandcoop-db.c3myioi8qr9d.eu-west-3.rds.amazonaws.com
+      port: 5432
+      user: postgres
+      pass: GreenCoop2026!
+      dbname: greenandcoop
+      schema: public
+      threads: 1

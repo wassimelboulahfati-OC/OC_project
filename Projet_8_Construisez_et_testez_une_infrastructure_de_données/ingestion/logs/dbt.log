@@ -1,0 +1,30 @@
+[0m11:27:25.133254 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000024B0AA36AB0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000024B0AA35B20>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000024B0AA36BA0>]}
+
+
+============================== 11:27:25.143005 | 20b635f7-f9bd-4328-849b-228c6686e5e6 ==============================
+[0m11:27:25.143005 [info ] [MainThread]: Running with dbt=1.11.8
+[0m11:27:25.144008 [debug] [MainThread]: running dbt with arguments {'version_check': 'True', 'no_print': 'None', 'static_parser': 'True', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'target_path': 'None', 'printer_width': '80', 'write_json': 'True', 'introspect': 'True', 'log_cache_events': 'False', 'empty': 'None', 'cache_selected_only': 'False', 'log_format': 'default', 'debug': 'False', 'fail_fast': 'False', 'profiles_dir': 'C:\\Users\\42030172\\.dbt', 'send_anonymous_usage_stats': 'True', 'quiet': 'False', 'warn_error': 'None', 'partial_parse': 'True', 'use_colors': 'True', 'invocation_command': 'dbt init greenandcoop', 'indirect_selection': 'eager', 'use_experimental_parser': 'False', 'log_path': 'logs'}
+[0m11:27:25.173413 [info ] [MainThread]: Creating dbt configuration folder at C:\Users\42030172\.dbt
+[0m11:27:25.175711 [debug] [MainThread]: Starter project path: C:\Users\42030172\AppData\Local\Programs\Python\Python312\Lib\site-packages\dbt\include\starter_project
+[0m11:27:25.222056 [info ] [MainThread]: 
+Your new dbt project "greenandcoop" was created!
+
+For more information on how to configure the profiles.yml file,
+please consult the dbt documentation here:
+
+  https://docs.getdbt.com/docs/configure-your-profile
+
+One more thing:
+
+Need help? Don't hesitate to reach out to us via GitHub issues or on Slack:
+
+  https://community.getdbt.com/
+
+Happy modeling!
+
+[0m11:27:25.223062 [info ] [MainThread]: Setting up your profile.
+[0m11:28:48.278486 [info ] [MainThread]: Profile greenandcoop written to C:\Users\42030172\.dbt\profiles.yml using target's profile_template.yml and your supplied values. Run 'dbt debug' to validate the connection.
+[0m11:28:48.279891 [debug] [MainThread]: Command `dbt init` succeeded at 11:28:48.279891 after 83.31 seconds
+[0m11:28:48.280949 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000024B0A5B61B0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000024B0A5B6120>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000024B0BBB5EE0>]}
+[0m11:28:48.280949 [debug] [MainThread]: Flushing usage events
+[0m11:28:48.807443 [debug] [MainThread]: An error was encountered while trying to flush usage events

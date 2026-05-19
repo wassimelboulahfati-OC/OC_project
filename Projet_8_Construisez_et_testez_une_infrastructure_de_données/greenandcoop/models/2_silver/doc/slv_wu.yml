@@ -1,0 +1,143 @@
+version: 2
+
+models:
+  - name: slv_wu_ichtegem
+    description: >
+      Modèle Silver issu de brz_wu_ichtegem_v1. Standardise les noms de colonnes,
+      caste les mesures varchar en numeric, aligne le schéma avec infoclimat
+      (colonnes absentes remplies à null).
+
+    columns:
+      - name: station_id
+        description: "Identifiant de la station WU Ichtegem (WU_ICHTEGEM)."
+        tests:
+          - not_null
+
+      - name: observed_at
+        description: "Horodatage de l'observation (UTC)."
+        tests:
+          - not_null
+
+      - name: source_system
+        description: "Système source (valeur: weather_underground)."
+
+      - name: temperature_c
+        description: "Température de l'air en °C."
+
+      - name: pressure_hpa
+        description: "Pression atmosphérique en hPa."
+
+      - name: humidity_pct
+        description: "Humidité relative en %."
+
+      - name: dew_point_c
+        description: "Température du point de rosée en °C."
+
+      - name: wind_speed_kmh
+        description: "Vitesse moyenne du vent en km/h."
+
+      - name: wind_gust_kmh
+        description: "Vitesse des rafales en km/h."
+
+      - name: wind_direction_text
+        description: "Direction du vent sous forme de texte (ex: N, NE, SW)."
+
+      - name: precip_rate_mmh
+        description: "Intensité des précipitations en mm/h."
+
+      - name: precip_accum_mm
+        description: "Cumul total des précipitations en mm."
+
+      - name: uv_index
+        description: "Indice UV."
+
+      - name: solar_radiation_wm2
+        description: "Rayonnement solaire en W/m²."
+
+      - name: wind_direction_deg
+        description: "Direction du vent en degrés (null pour WU)."
+
+      - name: precip_accum_3h_mm
+        description: "Cumul précipitations 3h (null pour WU)."
+
+      - name: visibility_m
+        description: "Visibilité en mètres (null pour WU)."
+
+      - name: cloud_cover_oktas
+        description: "Couverture nuageuse en octas (null pour WU)."
+
+      - name: snow_ground_cm
+        description: "Neige au sol en cm (null pour WU)."
+
+      - name: weather_code_omm
+        description: "Code OMM (null pour WU)."
+
+  - name: slv_wu_la_madeleine
+    description: >
+      Modèle Silver issu de brz_wu_la_madeleine_v1. Même structure que slv_wu_ichtegem,
+      pour la station Weather Underground de La Madeleine (France).
+
+    columns:
+      - name: station_id
+        description: "Identifiant de la station WU La Madeleine (WU_LA_MADELEINE)."
+        tests:
+          - not_null
+
+      - name: observed_at
+        description: "Horodatage de l'observation (UTC)."
+        tests:
+          - not_null
+
+      - name: source_system
+        description: "Système source (valeur: weather_underground)."
+
+      - name: temperature_c
+        description: "Température de l'air en °C."
+
+      - name: pressure_hpa
+        description: "Pression atmosphérique en hPa."
+
+      - name: humidity_pct
+        description: "Humidité relative en %."
+
+      - name: dew_point_c
+        description: "Température du point de rosée en °C."
+
+      - name: wind_speed_kmh
+        description: "Vitesse moyenne du vent en km/h."
+
+      - name: wind_gust_kmh
+        description: "Vitesse des rafales en km/h."
+
+      - name: wind_direction_text
+        description: "Direction du vent sous forme de texte (ex: N, NE, SW)."
+
+      - name: precip_rate_mmh
+        description: "Intensité des précipitations en mm/h."
+
+      - name: precip_accum_mm
+        description: "Cumul total des précipitations en mm."
+
+      - name: uv_index
+        description: "Indice UV."
+
+      - name: solar_radiation_wm2
+        description: "Rayonnement solaire en W/m²."
+
+      - name: wind_direction_deg
+        description: "Direction du vent en degrés (null pour WU)."
+
+      - name: precip_accum_3h_mm
+        description: "Cumul précipitations 3h (null pour WU)."
+
+      - name: visibility_m
+        description: "Visibilité en mètres (null pour WU)."
+
+      - name: cloud_cover_oktas
+        description: "Couverture nuageuse en octas (null pour WU)."
+
+      - name: snow_ground_cm
+        description: "Neige au sol en cm (null pour WU)."
+
+      - name: weather_code_omm
+        description: "Code OMM (null pour WU)."
