@@ -1,0 +1,40 @@
+flowchart LR
+    subgraph PROD["🐍 Producer (Python 3.12)"]
+        P1[Faker - Génération aléatoire]
+        P2[confluent-kafka Producer]
+        P1 --> P2
+    end
+
+    subgraph RP["📡 Redpanda Broker (Kafka API)"]
+        T[(Topic: client_tickets<br/>3 partitions, 1 réplica)]
+    end
+
+    subgraph SPARK["⚡ Consumer PySpark 3.5.3"]
+        S1[Structured Streaming<br/>readStream kafka]
+        S2[Parsing JSON + Schéma]
+        S3[Enrichissement<br/>+ colonne equipe_support]
+        S4[Agrégation fenêtrée<br/>type x priorité - 1 min]
+        S1 --> S2 --> S3
+        S3 --> S4
+    end
+
+    subgraph OUT["💾 Sorties"]
+        O1[(Parquet<br/>tickets enrichis)]
+        O2[Console<br/>agrégations 20s]
+    end
+
+    subgraph UI["🖥️ Redpanda Console"]
+        C1[localhost:8090<br/>Monitoring topics]
+    end
+
+    P2 -->|"JSON tickets<br/>Kafka protocol"| T
+    T -->|"subscribe<br/>earliest offset"| S1
+    S3 -->|"writeStream<br/>Parquet append"| O1
+    S4 -->|"writeStream<br/>console complete"| O2
+    T -.->|"Admin API"| C1
+
+    style PROD fill:#e1f5ff,stroke:#0288d1
+    style RP fill:#fff3e0,stroke:#f57c00
+    style SPARK fill:#f3e5f5,stroke:#7b1fa2
+    style OUT fill:#e8f5e9,stroke:#388e3c
+    style UI fill:#fce4ec,stroke:#c2185b
