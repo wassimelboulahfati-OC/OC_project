@@ -258,6 +258,18 @@ tasks:
     condition: "{{ outputs.test_premium_count.row.n != 30 }}"
     errorMessage: "ERREUR PREMIUM : attendu 30 vins premium, obtenu {{ outputs.test_premium_count.row.n }}"
     
+  # ---- Test du nombre de vins ordinaires ----
+  - id: test_ordinaire_count
+    type: io.kestra.plugin.jdbc.duckdb.Query
+    url: jdbc:duckdb:/app/data/bottleneck.db
+    sql: SELECT COUNT(*) AS n FROM produits_zscore WHERE is_premium = FALSE;
+    fetchType: FETCH_ONE
+
+  - id: verif_ordinaire_count
+    type: io.kestra.plugin.core.execution.Fail
+    condition: "{{ outputs.test_ordinaire_count.row.n != 684 }}"
+    errorMessage: "ERREUR ORDINAIRE : attendu 684 vins ordinaires, obtenu {{ outputs.test_ordinaire_count.row.n }}"
+
   # ---- Export des vins premium (CSV) ----
   - id: export_premium_wine
     type: io.kestra.plugin.jdbc.duckdb.Query
@@ -272,14 +284,31 @@ tasks:
     sql: COPY (SELECT * FROM produits_zscore WHERE is_premium = FALSE) TO '/app/data/ordinaire.csv' (HEADER, DELIMITER ';');
     fetchType: NONE
 
-  # ---- Export du rapport CA (Excel) ----
+  # ---- Export du rapport CA (Excel) avec ligne de total ----
   - id: export_rapport_ca
     type: io.kestra.plugin.jdbc.duckdb.Queries
     url: jdbc:duckdb:/app/data/bottleneck.db
     sql: |
       INSTALL excel; LOAD excel;
-      COPY (SELECT * FROM CA) TO '/app/data/rapport_ca.xlsx' WITH (FORMAT xlsx, HEADER true);
+      COPY (
+        SELECT
+          product_id,
+          product_label,
+          product_price,
+          product_total_sales,
+          CA_product
+        FROM CA
+        UNION ALL
+        SELECT
+          NULL AS product_id,
+          'TOTAL' AS product_label,
+          NULL AS product_price,
+          NULL AS product_total_sales,
+          ROUND(SUM(CA_product), 2) AS CA_product
+        FROM CA
+      ) TO '/app/data/rapport_ca.xlsx' WITH (FORMAT xlsx, HEADER true);
     fetchType: NONE
+
 
 
 # ---- Automatisation du déclenchement tout les 15 de chaque mois à 9h00 et ajout du retry pour toute les taches DuckDB ----
