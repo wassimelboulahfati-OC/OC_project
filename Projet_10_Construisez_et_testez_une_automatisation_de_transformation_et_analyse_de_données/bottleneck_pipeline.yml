@@ -308,6 +308,40 @@ tasks:
         FROM CA
       ) TO '/app/data/rapport_ca.xlsx' WITH (FORMAT xlsx, HEADER true);
     fetchType: NONE
+    
+  - id: test_export_premium
+    type: io.kestra.plugin.jdbc.duckdb.Query
+    url: jdbc:duckdb:/app/data/bottleneck.db
+    sql: SELECT COUNT(*) AS n FROM read_csv('/app/data/premium.csv', delim=';', header=true);
+    fetchType: FETCH_ONE
+
+  - id: verif_export_premium
+    type: io.kestra.plugin.core.execution.Fail
+    condition: "{{ outputs.test_export_premium.row.n == 0 }}"
+    errorMessage: "ERREUR EXPORT : premium.csv absent ou vide (0 ligne)"
+
+  - id: test_export_ordinaire
+    type: io.kestra.plugin.jdbc.duckdb.Query
+    url: jdbc:duckdb:/app/data/bottleneck.db
+    sql: SELECT COUNT(*) AS n FROM read_csv('/app/data/ordinaire.csv', delim=';', header=true);
+    fetchType: FETCH_ONE
+
+  - id: verif_export_ordinaire
+    type: io.kestra.plugin.core.execution.Fail
+    condition: "{{ outputs.test_export_ordinaire.row.n == 0 }}"
+    errorMessage: "ERREUR EXPORT : ordinaire.csv absent ou vide (0 ligne)"
+
+  - id: test_export_rapport
+    type: io.kestra.plugin.jdbc.duckdb.Query
+    url: jdbc:duckdb:/app/data/bottleneck.db
+    sql: SELECT COUNT(*) AS n FROM read_xlsx('/app/data/rapport_ca.xlsx');
+    fetchType: FETCH_ONE
+
+  - id: verif_export_rapport
+    type: io.kestra.plugin.core.execution.Fail
+    condition: "{{ outputs.test_export_rapport.row.n == 0 }}"
+    errorMessage: "ERREUR EXPORT : rapport_ca.xlsx absent ou vide (0 ligne)"
+
 
 
 
