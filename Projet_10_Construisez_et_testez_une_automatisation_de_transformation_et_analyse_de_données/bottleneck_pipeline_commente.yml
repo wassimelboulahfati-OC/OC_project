@@ -1,0 +1,493 @@
+# =============================================================================
+# PIPELINE BOTTLENECK — Automatisation du reporting commercial
+# -----------------------------------------------------------------------------
+# Objectif : reconcilier les ventes issues de l'ERP et du CMS web via une table
+#            de liaison, calculer le chiffre d'affaires par produit, puis
+#            detecter les vins "premium" (millesimes) par z-score.
+#
+# Stack    : Kestra (orchestration) + DuckDB (SQL) + Python/pandas (z-score)
+# Principe : un TEST apres chaque etape cle -> logique "fail-fast" (si un test
+#            echoue, le pipeline s'arrete et aucune donnee corrompue ne descend).
+# =============================================================================
+
+id: bottleneck_pipeline
+namespace: bottleneck
+
+tasks:
+
+  # ===========================================================================
+  # ETAPE 1 - INGESTION : chargement brut des 3 fichiers Excel dans DuckDB
+  # all_varchar=true : tout est lu en texte pour eviter tout typage automatique
+  # hasardeux a l'ingestion (le typage se fera proprement au nettoyage).
+  # ===========================================================================
+
+  # Ingestion de l'ERP (prix, stocks) -> table brute erp_raw
+  - id: ingestion_erp
+    type: io.kestra.plugin.jdbc.duckdb.Queries
+    url: jdbc:duckdb:/app/data/bottleneck.db
+    inputFiles:
+      erp.xlsx: "nsfile:///Fichier_erp.xlsx"   # fichier source stocke dans Kestra (Namespace Files)
+    sql: |
+      INSTALL excel; LOAD excel;               -- extension DuckDB pour lire le format xlsx
+      CREATE OR REPLACE TABLE erp_raw AS
+      SELECT * FROM read_xlsx('erp.xlsx', all_varchar = true);
+    fetchType: NONE
+
+  # Ingestion du CMS web (libelles, ventes) -> table brute web_raw
+  - id: ingestion_web
+    type: io.kestra.plugin.jdbc.duckdb.Queries
+    url: jdbc:duckdb:/app/data/bottleneck.db
+    inputFiles:
+      web.xlsx: "nsfile:///Fichier_web.xlsx"
+    sql: |
+      INSTALL excel; LOAD excel;
+      CREATE OR REPLACE TABLE web_raw AS
+      SELECT * FROM read_xlsx('web.xlsx', all_varchar = true);
+    fetchType: NONE
+
+  # Ingestion de la table de liaison (pont ERP <-> web) -> table brute liaison_raw
+  - id: ingestion_liaison
+    type: io.kestra.plugin.jdbc.duckdb.Queries
+    url: jdbc:duckdb:/app/data/bottleneck.db
+    inputFiles:
+      liaison.xlsx: "nsfile:///fichier_liaison.xlsx"
+    sql: |
+      INSTALL excel; LOAD excel;
+      CREATE OR REPLACE TABLE liaison_raw AS
+      SELECT * FROM read_xlsx('liaison.xlsx', all_varchar = true);
+    fetchType: NONE
+
+
+  # ===========================================================================
+  # TEST 1 - NON-VACUITE : la source ERP brute contient bien des donnees
+  # Garde-fou en debut de chaine : si le fichier source est vide, on arrete tout.
+  # ===========================================================================
+
+  # Lecture : compte le nombre de lignes de erp_raw
+  - id: test_erp_non_vide
+    type: io.kestra.plugin.jdbc.duckdb.Query
+    url: jdbc:duckdb:/app/data/bottleneck.db
+    sql: SELECT COUNT(*) AS n FROM erp_raw;
+    fetchType: FETCH_ONE
+
+  # Verdict : echec si la table est vide (n == 0)
+  - id: verif_erp_non_vide
+    type: io.kestra.plugin.core.execution.Fail
+    condition: "{{ outputs.test_erp_non_vide.row.n == 0 }}"
+    errorMessage: "ERREUR : la table erp_raw est vide !"
+
+
+  # ===========================================================================
+  # ETAPE 2a - NETTOYAGE & TYPAGE ERP
+  # On selectionne les colonnes utiles, on les renomme proprement et on les type.
+  # CAST strict (et non TRY_CAST) : une anomalie de typage fait echouer la tache
+  # de facon visible plutot que de la masquer silencieusement par un NULL.
+  # ===========================================================================
+
+  - id: nettoyage_erp
+    type: io.kestra.plugin.jdbc.duckdb.Queries
+    url: jdbc:duckdb:/app/data/bottleneck.db
+    sql: |
+      CREATE OR REPLACE TABLE erp_clean AS
+      SELECT
+        product_id AS product_id,                                          -- identifiant conserve en VARCHAR (peut contenir du texte)
+        CAST(REPLACE(NULLIF(price, ''), ',', '.') AS DOUBLE) AS product_price,  -- prix : virgule FR -> point, puis converti en nombre
+        CAST(onsale_web AS BOOLEAN) AS product_is_on_sale_web,             -- indicateur "en vente sur le web"
+        CAST(stock_quantity AS INTEGER) AS product_stock_quantity,         -- quantite en stock
+        stock_status AS product_stock_status                               -- statut du stock
+      FROM erp_raw
+      WHERE product_id IS NOT NULL AND product_id != ''                    -- on ecarte les lignes sans identifiant
+        AND price IS NOT NULL AND price != '';                            -- ... et sans prix (inutilisables pour le CA)
+    fetchType: NONE
+
+  # DEDOUBLONNAGE ERP : DISTINCT supprime les lignes strictement identiques -> table finale "erp"
+  - id: dedoublonnage_erp
+    type: io.kestra.plugin.jdbc.duckdb.Queries
+    url: jdbc:duckdb:/app/data/bottleneck.db
+    sql: |
+      CREATE OR REPLACE TABLE erp AS
+      SELECT DISTINCT * FROM erp_clean;
+    fetchType: NONE
+
+  # ---------------------------------------------------------------------------
+  # TEST 2 - VOLUMETRIE + UNICITE ERP (un seul test couvre 3 invariants) :
+  #   n == n_distinct -> aucun doublon de product_id
+  #   n == 825        -> volumetrie attendue (donc aucune ligne perdue/en trop)
+  #   (un NULL fuyant ferait changer le compte : il serait donc detecte ici)
+  # ---------------------------------------------------------------------------
+  - id: test_erp_count
+    type: io.kestra.plugin.jdbc.duckdb.Query
+    url: jdbc:duckdb:/app/data/bottleneck.db
+    sql: SELECT COUNT(*) AS n, COUNT(DISTINCT product_id) AS n_distinct FROM erp;
+    fetchType: FETCH_ONE
+
+  - id: verif_erp_count
+    type: io.kestra.plugin.core.execution.Fail
+    condition: "{{ outputs.test_erp_count.row.n != 825 or outputs.test_erp_count.row.n_distinct != 825 }}"
+    errorMessage: "ERREUR ERP : attendu 825 lignes uniques, obtenu {{ outputs.test_erp_count.row.n }} lignes / {{ outputs.test_erp_count.row.n_distinct }} product_id distincts"
+
+
+  # ===========================================================================
+  # ETAPE 2b - NETTOYAGE WEB : suppression des lignes sans identifiant (sku)
+  # A ce stade on garde TOUTES les lignes (1428) : le filtrage des doublons
+  # image/produit se fera a l'etape de dedoublonnage juste apres.
+  # ===========================================================================
+
+  - id: nettoyage_web
+    type: io.kestra.plugin.jdbc.duckdb.Queries
+    url: jdbc:duckdb:/app/data/bottleneck.db
+    sql: |
+      CREATE OR REPLACE TABLE web_clean AS
+      SELECT *
+      FROM web_raw
+      WHERE sku IS NOT NULL AND sku != '';   -- on ecarte les lignes sans cle de rapprochement
+    fetchType: NONE
+
+  # TEST volumetrie intermediaire WEB : on verifie qu'on a bien 1428 lignes AVANT le filtre post_type
+  - id: test_web_clean_count
+    type: io.kestra.plugin.jdbc.duckdb.Query
+    url: jdbc:duckdb:/app/data/bottleneck.db
+    sql: SELECT COUNT(*) AS n FROM web_clean;
+    fetchType: FETCH_ONE
+
+  - id: verif_web_clean_count
+    type: io.kestra.plugin.core.execution.Fail
+    condition: "{{ outputs.test_web_clean_count.row.n != 1428 }}"
+    errorMessage: "ERREUR WEB (nettoyage) : attendu 1428 lignes, obtenu {{ outputs.test_web_clean_count.row.n }} lignes"
+
+
+  # ---------------------------------------------------------------------------
+  # DEDOUBLONNAGE WEB : on ne garde que les vraies fiches produit.
+  # Chaque produit a une 2e ligne "image/attachment" -> le filtre post_type
+  # = 'product' elimine ces doublons et fait passer de 1428 a 714 lignes.
+  # On en profite pour renommer/typer les colonnes utiles -> table finale "web".
+  # ---------------------------------------------------------------------------
+  - id: dedoublonnage_web
+    type: io.kestra.plugin.jdbc.duckdb.Queries
+    url: jdbc:duckdb:/app/data/bottleneck.db
+    sql: |
+      CREATE OR REPLACE TABLE web AS
+      SELECT
+        sku AS id_web,                                    -- identifiant web (conserve en VARCHAR)
+        CAST(total_sales AS INTEGER) AS product_total_sales,  -- quantite vendue
+        post_title AS product_label                       -- libelle lisible du produit
+      FROM web_clean
+      WHERE post_type = 'product'                         -- on exclut les lignes image/attachment
+    fetchType: NONE
+
+  # TEST volumetrie + unicite WEB : 714 lignes, 714 id_web distincts (pas de doublon)
+  - id: test_web_count
+    type: io.kestra.plugin.jdbc.duckdb.Query
+    url: jdbc:duckdb:/app/data/bottleneck.db
+    sql: SELECT COUNT(*) AS n, COUNT(DISTINCT id_web) AS n_distinct FROM web;
+    fetchType: FETCH_ONE
+
+  - id: verif_web_count
+    type: io.kestra.plugin.core.execution.Fail
+    condition: "{{ outputs.test_web_count.row.n != 714 or outputs.test_web_count.row.n_distinct != 714 }}"
+    errorMessage: "ERREUR WEB : attendu 714 lignes uniques, obtenu {{ outputs.test_web_count.row.n }} lignes / {{ outputs.test_web_count.row.n_distinct }} id_web distincts"
+
+
+  # ===========================================================================
+  # ETAPE 2c - NETTOYAGE & DEDOUBLONNAGE LIAISON
+  # La liaison fait le pont entre product_id (ERP) et id_web (CMS).
+  # ===========================================================================
+
+  # NETTOYAGE : on ecarte les lignes sans product_id (inutilisables pour le pont)
+  - id: nettoyage_liaison
+    type: io.kestra.plugin.jdbc.duckdb.Queries
+    url: jdbc:duckdb:/app/data/bottleneck.db
+    sql: |
+      CREATE OR REPLACE TABLE liaison_clean AS
+      SELECT *
+      FROM liaison_raw
+      WHERE product_id IS NOT NULL AND product_id != '';
+    fetchType: NONE
+
+  # DEDOUBLONNAGE : DISTINCT absorbe les paires (product_id, id_web) en double -> table finale "liaison"
+  - id: dedoublonnage_liaison
+    type: io.kestra.plugin.jdbc.duckdb.Queries
+    url: jdbc:duckdb:/app/data/bottleneck.db
+    sql: |
+      CREATE OR REPLACE TABLE liaison AS
+      SELECT DISTINCT *
+      FROM liaison_clean;
+    fetchType: NONE
+
+  # TEST volumetrie + unicite LIAISON : 825 lignes, 825 product_id distincts.
+  # Le controle sur product_id detecte aussi les mappings incoherents
+  # (un meme product_id pointant vers plusieurs id_web differents).
+  - id: test_liaison_count
+    type: io.kestra.plugin.jdbc.duckdb.Query
+    url: jdbc:duckdb:/app/data/bottleneck.db
+    sql: SELECT COUNT(*) AS n, COUNT(DISTINCT product_id) AS n_distinct FROM liaison;
+    fetchType: FETCH_ONE
+
+  - id: verif_liaison_count
+    type: io.kestra.plugin.core.execution.Fail
+    condition: "{{ outputs.test_liaison_count.row.n != 825 or outputs.test_liaison_count.row.n_distinct != 825 }}"
+    errorMessage: "ERREUR LIAISON : attendu 825 lignes uniques, obtenu {{ outputs.test_liaison_count.row.n }} lignes / {{ outputs.test_liaison_count.row.n_distinct }} product_id distincts"
+
+
+  # ===========================================================================
+  # ETAPE 3 - FUSION : on reunit les 3 sources via la table de liaison
+  # En 2 temps (INNER JOIN, donc seuls les produits presents partout sont gardes) :
+  #   1) ERP  JOIN  liaison  (sur product_id)  -> on recupere id_web
+  #   2) resultat  JOIN  web  (sur id_web)      -> on recupere ventes + libelle
+  # Resultat attendu : 714 lignes (intersection des 3 sources).
+  # ===========================================================================
+
+  - id: fusion_erp_web
+    type: io.kestra.plugin.jdbc.duckdb.Queries
+    url: jdbc:duckdb:/app/data/bottleneck.db
+    sql: |
+      CREATE OR REPLACE TABLE fusion AS
+      WITH fusion_1 AS (                              -- 1er JOIN : ERP + liaison
+        SELECT erp.*, lia.id_web
+        FROM erp
+        INNER JOIN liaison lia ON erp.product_id = lia.product_id
+      )
+      SELECT
+        fu.*,
+        web.product_total_sales,                      -- 2e JOIN : on ajoute les ventes
+        web.product_label                             -- ... et le libelle web
+      FROM fusion_1 fu
+      INNER JOIN web ON fu.id_web = web.id_web;
+    fetchType: NONE
+
+  # TEST coherence post-jointure : 714 lignes, 714 product_id distincts.
+  # Verifie qu'il n'y a pas eu d'explosion cartesienne (doublons crees par le JOIN).
+  - id: test_fusion_count
+    type: io.kestra.plugin.jdbc.duckdb.Query
+    url: jdbc:duckdb:/app/data/bottleneck.db
+    sql: SELECT COUNT(*) AS n, COUNT(DISTINCT product_id) AS n_distinct FROM fusion;
+    fetchType: FETCH_ONE
+
+  - id: verif_fusion_count
+    type: io.kestra.plugin.core.execution.Fail
+    condition: "{{ outputs.test_fusion_count.row.n != 714 or outputs.test_fusion_count.row.n_distinct != 714 }}"
+    errorMessage: "ERREUR FUSION : attendu 714 lignes uniques, obtenu {{ outputs.test_fusion_count.row.n }} lignes / {{ outputs.test_fusion_count.row.n_distinct }} product_id distincts"
+
+
+  # ===========================================================================
+  # ETAPE 4 - CALCUL DU CHIFFRE D'AFFAIRES par produit
+  # CA_product = prix unitaire x quantite vendue. Resultat dans la table CA.
+  # ===========================================================================
+
+  - id: calcul_CA
+    type: io.kestra.plugin.jdbc.duckdb.Queries
+    url: jdbc:duckdb:/app/data/bottleneck.db
+    sql: |
+      CREATE OR REPLACE TABLE CA AS
+      SELECT
+        product_id,
+        product_label,
+        product_price,
+        product_total_sales,
+        (product_price * product_total_sales) AS CA_product   -- CA = prix x ventes
+      FROM fusion
+    fetchType: NONE
+
+  # TEST coherence metier - CA TOTAL : la somme des CA produits doit valoir 70 568,60 €
+  - id: test_CA_sum
+    type: io.kestra.plugin.jdbc.duckdb.Query
+    url: jdbc:duckdb:/app/data/bottleneck.db
+    sql: SELECT ROUND(sum(CA_product),2) AS CA_tot FROM CA;
+    fetchType: FETCH_ONE
+
+  - id: verif_CA_sum
+    type: io.kestra.plugin.core.execution.Fail
+    condition: "{{ outputs.test_CA_sum.row.CA_tot != 70568.60 }}"
+    errorMessage: "ERREUR CA : attendu 70568.60 euros, obtenu {{ outputs.test_CA_sum.row.CA_tot }} euros"
+
+
+  # ===========================================================================
+  # ETAPE 5 - Z-SCORE (Python / pandas)
+  # Detection statistique des prix exceptionnels (= vins "premium"/millesimes).
+  # z = (prix - moyenne) / ecart-type ; un produit est premium si z > 2
+  # (= prix situe a plus de 2 ecarts-types au-dessus de la moyenne).
+  # Realise en Python car ce calcul statistique n'est pas le point fort du SQL.
+  # ===========================================================================
+
+  - id: zscore
+    type: io.kestra.plugin.scripts.python.Script
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process   # execution sur le meme systeme de fichiers (acces direct a bottleneck.db)
+    beforeCommands:
+      - pip install pandas duckdb
+    script: |
+      import duckdb
+      import pandas as pd
+
+      # Connexion a la base persistante
+      con = duckdb.connect('/app/data/bottleneck.db')
+
+      # Chargement de la table CA dans un DataFrame
+      df = con.execute("SELECT * FROM CA").df()
+
+      # --- calcul du z-score sur product_price ---
+      df['z_score'] = ((df['product_price'] - df['product_price'].mean()) / df['product_price'].std())
+
+      # Classification : premium si z > 2
+      df['is_premium'] = df['z_score'] > 2
+
+      # Ecriture du resultat (table CA enrichie du z_score et du flag premium)
+      con.execute("CREATE OR REPLACE TABLE produits_zscore AS SELECT * FROM df")
+      con.close()
+
+      # Log de controle rapide dans les logs Kestra
+      print("Nombre de vins premium :", int(df['is_premium'].sum()))
+
+  # TEST coherence metier - PREMIUM : on doit detecter exactement 30 vins premium (z > 2)
+  - id: test_premium_count
+    type: io.kestra.plugin.jdbc.duckdb.Query
+    url: jdbc:duckdb:/app/data/bottleneck.db
+    sql: SELECT COUNT(*) AS n FROM produits_zscore WHERE is_premium = TRUE;
+    fetchType: FETCH_ONE
+
+  - id: verif_premium_count
+    type: io.kestra.plugin.core.execution.Fail
+    condition: "{{ outputs.test_premium_count.row.n != 30 }}"
+    errorMessage: "ERREUR PREMIUM : attendu 30 vins premium, obtenu {{ outputs.test_premium_count.row.n }}"
+
+  # TEST coherence metier - ORDINAIRE : on doit avoir 684 vins ordinaires (714 - 30).
+  # Controle de coherence complementaire au test premium, juste AVANT les exports.
+  - id: test_ordinaire_count
+    type: io.kestra.plugin.jdbc.duckdb.Query
+    url: jdbc:duckdb:/app/data/bottleneck.db
+    sql: SELECT COUNT(*) AS n FROM produits_zscore WHERE is_premium = FALSE;
+    fetchType: FETCH_ONE
+
+  - id: verif_ordinaire_count
+    type: io.kestra.plugin.core.execution.Fail
+    condition: "{{ outputs.test_ordinaire_count.row.n != 684 }}"
+    errorMessage: "ERREUR ORDINAIRE : attendu 684 vins ordinaires, obtenu {{ outputs.test_ordinaire_count.row.n }}"
+
+
+  # ===========================================================================
+  # ETAPE 6 - EXPORTS (livrables)
+  # 3 fichiers ecrits dans /app/data/ (dossier persiste via volume Docker).
+  # Separateur ';' pour les CSV : compatibilite avec Excel en parametres FR.
+  # ===========================================================================
+
+  # Export CSV des 30 vins premium
+  - id: export_premium_wine
+    type: io.kestra.plugin.jdbc.duckdb.Query
+    url: jdbc:duckdb:/app/data/bottleneck.db
+    sql: COPY (SELECT * FROM produits_zscore WHERE is_premium = TRUE) TO '/app/data/premium.csv' (HEADER, DELIMITER ';');
+    fetchType: NONE
+
+  # Export CSV des 684 vins ordinaires
+  - id: export_ordinaire_wine
+    type: io.kestra.plugin.jdbc.duckdb.Query
+    url: jdbc:duckdb:/app/data/bottleneck.db
+    sql: COPY (SELECT * FROM produits_zscore WHERE is_premium = FALSE) TO '/app/data/ordinaire.csv' (HEADER, DELIMITER ';');
+    fetchType: NONE
+
+  # Export Excel du rapport de CA : detail par produit + une ligne "TOTAL" en bas.
+  # La 2e partie du UNION ALL ajoute une ligne recapitulative avec le CA total.
+  - id: export_rapport_ca
+    type: io.kestra.plugin.jdbc.duckdb.Queries
+    url: jdbc:duckdb:/app/data/bottleneck.db
+    sql: |
+      INSTALL excel; LOAD excel;
+      COPY (
+        SELECT                                  -- detail : une ligne par produit
+          product_id,
+          product_label,
+          product_price,
+          product_total_sales,
+          CA_product
+        FROM CA
+        UNION ALL
+        SELECT                                  -- ligne de synthese : CA total
+          NULL AS product_id,
+          'TOTAL' AS product_label,
+          NULL AS product_price,
+          NULL AS product_total_sales,
+          ROUND(SUM(CA_product), 2) AS CA_product
+        FROM CA
+      ) TO '/app/data/rapport_ca.xlsx' WITH (FORMAT xlsx, HEADER true);
+    fetchType: NONE
+
+  # ===========================================================================
+  # TESTS DES LIVRABLES : on verifie que les 3 fichiers exportes existent
+  # ET ne sont pas vides. Principe : on relit chaque fichier avec DuckDB.
+  #   - si le fichier est absent -> la lecture echoue -> la tache echoue
+  #   - si le fichier est vide   -> COUNT(*) = 0 -> le Fail se declenche
+  # Garantit qu'aucun livrable corrompu/manquant ne sorte du pipeline.
+  # ===========================================================================
+
+  # Relecture de premium.csv : compte ses lignes (separateur ';', avec entete)
+  - id: test_export_premium
+    type: io.kestra.plugin.jdbc.duckdb.Query
+    url: jdbc:duckdb:/app/data/bottleneck.db
+    sql: SELECT COUNT(*) AS n FROM read_csv('/app/data/premium.csv', delim=';', header=true);
+    fetchType: FETCH_ONE
+
+  # Verdict : echec si premium.csv est absent ou vide (0 ligne)
+  - id: verif_export_premium
+    type: io.kestra.plugin.core.execution.Fail
+    condition: "{{ outputs.test_export_premium.row.n == 0 }}"
+    errorMessage: "ERREUR EXPORT : premium.csv absent ou vide (0 ligne)"
+
+  # Relecture de ordinaire.csv : compte ses lignes
+  - id: test_export_ordinaire
+    type: io.kestra.plugin.jdbc.duckdb.Query
+    url: jdbc:duckdb:/app/data/bottleneck.db
+    sql: SELECT COUNT(*) AS n FROM read_csv('/app/data/ordinaire.csv', delim=';', header=true);
+    fetchType: FETCH_ONE
+
+  # Verdict : echec si ordinaire.csv est absent ou vide (0 ligne)
+  - id: verif_export_ordinaire
+    type: io.kestra.plugin.core.execution.Fail
+    condition: "{{ outputs.test_export_ordinaire.row.n == 0 }}"
+    errorMessage: "ERREUR EXPORT : ordinaire.csv absent ou vide (0 ligne)"
+
+  # Relecture du rapport Excel : compte ses lignes.
+  # NB : type Query (singulier) + read_xlsx simple, car l'extension excel est
+  # deja chargee plus tot dans la meme base persistante (pas besoin de INSTALL/LOAD).
+  - id: test_export_rapport
+    type: io.kestra.plugin.jdbc.duckdb.Query
+    url: jdbc:duckdb:/app/data/bottleneck.db
+    sql: SELECT COUNT(*) AS n FROM read_xlsx('/app/data/rapport_ca.xlsx');
+    fetchType: FETCH_ONE
+
+  # Verdict : echec si rapport_ca.xlsx est absent ou vide (0 ligne)
+  - id: verif_export_rapport
+    type: io.kestra.plugin.core.execution.Fail
+    condition: "{{ outputs.test_export_rapport.row.n == 0 }}"
+    errorMessage: "ERREUR EXPORT : rapport_ca.xlsx absent ou vide (0 ligne)"
+
+
+# =============================================================================
+# CONFIGURATION GLOBALE DU FLOW
+# =============================================================================
+
+# RESILIENCE CIBLEE : retry applique a TOUTES les taches DuckDB (Queries + Query)
+# via pluginDefaults, sans avoir a le repeter sur chaque tache.
+# 3 tentatives espacees de 10 s -> absorbe les pannes techniques transitoires.
+# Volontairement ABSENT des taches Fail : un echec metier est deterministe,
+# le retenter ne servirait a rien (la resilience ne doit pas masquer un bug metier).
+pluginDefaults:
+  - type: io.kestra.plugin.jdbc.duckdb.Queries
+    values:
+      retry:
+        type: constant
+        maxAttempt: 3
+        interval: PT10S
+  - type: io.kestra.plugin.jdbc.duckdb.Query
+    values:
+      retry:
+        type: constant
+        maxAttempt: 3
+        interval: PT10S
+
+# AUTOMATISATION : declenchement planifie le 15 de chaque mois a 09h00
+# (heure de Paris -> gere automatiquement l'heure d'ete/hiver).
+# Cale sur le cycle des arretes comptables, sans intervention humaine.
+triggers:
+  - id: schedule
+    type: io.kestra.plugin.core.trigger.Schedule
+    cron: "0 9 15 * *"
+    timezone: Europe/Paris
