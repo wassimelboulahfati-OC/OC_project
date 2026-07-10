@@ -8,7 +8,8 @@ from datetime import datetime, timedelta
 API_BASE_URL = "https://api.openagenda.com/v2"
 AGENDA_UID = "76294001"
 DAYS_LOOKBACK = 365
-OUTPUT_PATH = "../../data/events.json"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+OUTPUT_PATH = os.path.join(BASE_DIR, "..", "..", "data", "events.json")
 ENV_KEY_NAME = "OpenAgendaKey"
 
 
