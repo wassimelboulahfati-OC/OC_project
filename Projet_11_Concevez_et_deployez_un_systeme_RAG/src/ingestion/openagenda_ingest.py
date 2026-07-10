@@ -73,7 +73,7 @@ def extract_event_details(e):
     }
 
 
-def est_valide(document):
+def is_valid(document):
     """Rejette l'événement si text, city ou start_date est absent ou vide."""
     text = document.get("text", "")
     metadata = document.get("metadata", {})
@@ -94,7 +94,7 @@ if __name__ == "__main__":
     print(f"Événements récupérés : {len(all_events)}")
 
     documents = [extract_event_details(e) for e in all_events]
-    documents = [doc for doc in documents if est_valide(doc)]
+    documents = [doc for doc in documents if is_valid(doc)]
     print(f"Événements après filtrage : {len(documents)}")
 
     save_documents(documents, OUTPUT_PATH)
