@@ -1,0 +1,52 @@
+version: 2
+
+models:
+  - name: mart_eligibilite_prime
+    description: "Éligibilité et montant de la prime sportive (5% du salaire brut) par salarié."
+    columns:
+      - name: id_salarie
+        tests:
+          - unique
+          - not_null
+      - name: eligible_prime
+        tests:
+          - not_null
+      - name: montant_prime
+        description: "Montant de la prime en euros (0 si non éligible)."
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+  - name: mart_eligibilite_bien_etre
+    description: "Éligibilité et nombre de jours bien-être (>=15 activités) par salarié."
+    columns:
+      - name: id_salarie
+        tests:
+          - unique
+          - not_null
+      - name: jours_bien_etre
+        description: "Nombre de jours accordés (0 ou 5)."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [0, 5]
+
+  - name: mart_impact_financier
+    description: "Synthèse financière globale du dispositif (1 seule ligne)."
+    columns:
+      - name: cout_total_dispositif
+        description: "Coût total = primes + jours bien-être valorisés."
+        tests:
+          - not_null
+
+  - name: mart_anomalies
+    description: "Anomalies actionnables par les RH (adresses imprécises, incohérences)."
+    columns:
+      - name: id_salarie
+        tests:
+          - not_null
+      - name: type_anomalie
+        tests:
+          - not_null

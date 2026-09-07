@@ -1,0 +1,84 @@
+id: slack_digest
+namespace: sportdata
+
+description: |
+  Digest mensuel des activités sportives publié sur Slack pour
+  favoriser l'émulation entre salariés (cron : lundi 8h).
+  Requête SQL native Kestra + publication Slack via script Python
+  (contournement SSL entreprise).
+
+variables:
+  fenetre_jours: 30
+  runner_image: sds-runner:latest
+  docker_network: projet_12_gerez_un_projet_dinfrastructure_default
+
+tasks:
+  # 1) KPI agrégés en une seule ligne
+  - id: kpi
+    type: io.kestra.plugin.jdbc.postgresql.Query
+    url: jdbc:postgresql://postgres_data:5432/sport_data
+    username: sds_admin
+    password: "{{ secret('DATA_DB_PASSWORD') }}"
+    fetchType: FETCH_ONE
+    sql: |
+      with periode as (
+        select a.id_salarie, a.type_activite
+        from staging.stg_activites a
+        where a.date_activite >= current_date - interval '{{ vars.fenetre_jours }} days'
+      ),
+      totaux as (
+        select count(*) as nb_activites,
+               count(distinct id_salarie) as nb_salaries
+        from periode
+      ),
+      top_salaries as (
+        select string_agg(nom_complet || ' (' || nb || ')', ', ') as classement
+        from (
+          select r.prenom || ' ' || r.nom as nom_complet, count(*) as nb
+          from periode p
+          join staging.stg_rh r on r.id_salarie = p.id_salarie
+          group by r.prenom, r.nom
+          order by nb desc
+          limit 3
+        ) s
+      ),
+      top_activites as (
+        select string_agg(type_activite || ' (' || nb || ')', ', ') as classement
+        from (
+          select type_activite, count(*) as nb
+          from periode
+          group by type_activite
+          order by nb desc
+          limit 3
+        ) a
+      )
+      select
+        t.nb_activites,
+        t.nb_salaries,
+        coalesce(ts.classement, 'aucun') as top_salaries,
+        coalesce(ta.classement, 'aucune') as top_activites
+      from totaux t, top_salaries ts, top_activites ta
+
+  # 2) Publication Slack via script Python (SSL désactivé)
+  - id: slack
+    type: io.kestra.plugin.scripts.python.Commands
+    containerImage: "{{ vars.runner_image }}"
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+      networkMode: "{{ vars.docker_network }}"
+    env:
+      SLACK_WEBHOOK_URL: "{{ secret('SLACK_WEBHOOK_URL') }}"
+      SLACK_VERIFY_SSL: "false"
+      NB_ACTIVITES: "{{ outputs.kpi.row.nb_activites }}"
+      NB_SALARIES: "{{ outputs.kpi.row.nb_salaries }}"
+      TOP_SALARIES: "{{ outputs.kpi.row.top_salaries }}"
+      TOP_ACTIVITES: "{{ outputs.kpi.row.top_activites }}"
+      FENETRE_JOURS: "{{ vars.fenetre_jours }}"
+    commands:
+      - python /app/python/post_slack.py
+
+triggers:
+  - id: hebdomadaire
+    type: io.kestra.plugin.core.trigger.Schedule
+    cron: "0 8 * * 1"

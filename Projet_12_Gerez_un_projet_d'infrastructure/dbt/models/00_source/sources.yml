@@ -1,0 +1,16 @@
+version: 2
+
+sources:
+  - name: raw
+    description: "Données brutes chargées depuis les fichiers Excel et la simulation"
+    schema: raw
+    tables:
+      - name: rh
+        description: "Données RH des salariés (source Excel)"
+      - name: sport
+        description: "Pratique sportive déclarée par salarié (source Excel)"
+      - name: activites
+        description: "Activités sportives simulées sur 12 mois"
+      - name: distances_domicile_travail
+        description: "Distances domicile->entreprise calculées via ORS (script Python ors_client.py)"
+
