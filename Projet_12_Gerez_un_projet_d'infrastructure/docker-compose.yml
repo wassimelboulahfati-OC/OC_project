@@ -1,0 +1,92 @@
+volumes:
+  postgres_kestra_data:
+    driver: local
+  postgres_data_data:
+    driver: local
+  kestra_data:
+    driver: local
+
+services:
+  # ---------- Postgres dédié au métastore Kestra ----------
+  postgres_kestra:
+    image: postgres:16
+    container_name: sds_postgres_kestra
+    volumes:
+      - postgres_kestra_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: kestra
+      POSTGRES_USER: kestra
+      POSTGRES_PASSWORD: ${KESTRA_DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ---------- Postgres dédié aux DONNÉES du projet ----------
+  postgres_data:
+    image: postgres:16
+    container_name: sds_postgres_data
+    ports:
+      - "5433:5432"          # exposé sur 5433 pour Power BI / DBeaver / dbt
+    volumes:
+      - postgres_data_data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d   # scripts d'init (schémas)
+    environment:
+      POSTGRES_DB: ${DATA_DB_NAME}
+      POSTGRES_USER: ${DATA_DB_USER}
+      POSTGRES_PASSWORD: ${DATA_DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ---------- Kestra (orchestrateur) ----------
+  kestra:
+    image: kestra/kestra:latest
+    container_name: sds_kestra
+    env_file:
+      - .env_encoded
+    pull_policy: always
+    user: "root"
+    command: server standalone
+    volumes:
+      - kestra_data:/app/storage
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/kestra-wd:/tmp/kestra-wd
+      - ./python:/app/python:ro          # tes scripts python accessibles depuis Kestra
+      - ./dbt:/app/dbt:ro                 # ton projet dbt accessible depuis Kestra
+      - ./great_expectations:/app/great_expectations:ro
+    environment:
+      KESTRA_CONFIGURATION: |
+        datasources:
+          postgres:
+            url: jdbc:postgresql://postgres_kestra:5432/kestra
+            driverClassName: org.postgresql.Driver
+            username: kestra
+            password: ${KESTRA_DB_PASSWORD}
+        kestra:
+          server:
+            basic-auth:
+              enabled: false
+          repository:
+            type: postgres
+          storage:
+            type: local
+            local:
+              base-path: "/app/storage"
+          queue:
+            type: postgres
+          tasks:
+            tmp-dir:
+              path: /tmp/kestra-wd/tmp
+    ports:
+      - "8090:8080"          # UI Kestra
+      - "8081:8081"
+    depends_on:
+      postgres_kestra:
+        condition: service_healthy
+    restart: unless-stopped

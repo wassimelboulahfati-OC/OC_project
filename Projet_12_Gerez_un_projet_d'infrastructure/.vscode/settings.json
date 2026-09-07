@@ -1,0 +1,5 @@
+{
+  "dbt.dbtPythonPathOverride": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+  "dbt.profilesDirOverride": "${workspaceFolder}\\dbt",
+  "dbt.projectDir": "${workspaceFolder}\\dbt"
+}
