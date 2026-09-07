@@ -1,0 +1,68 @@
+version: 2
+
+models:
+  - name: stg_rh
+    description: "Données RH nettoyées et typées (1 ligne par salarié)."
+    columns:
+      - name: id_salarie
+        description: "Identifiant unique du salarié."
+        tests:
+          - unique
+          - not_null
+      - name: salaire_brut
+        description: "Salaire brut annuel en euros."
+        tests:
+          - not_null
+      - name: moyen_deplacement
+        description: "Moyen de déplacement domicile-travail déclaré."
+        tests:
+          - not_null
+          - accepted_values:
+              values:
+                - "Marche/running"
+                - "Vélo/Trottinette/Autres"
+                - "Transports en commun"
+                - "véhicule thermique/électrique"
+
+  - name: stg_sport
+    description: "Salariés ayant déclaré une pratique sportive."
+    columns:
+      - name: id_salarie
+        description: "Identifiant du salarié (référence RH)."
+        tests:
+          - unique
+          - not_null
+          - relationships:
+              to: ref('stg_rh')
+              field: id_salarie
+      - name: sport_declare
+        description: "Sport principal déclaré."
+        tests:
+          - not_null
+
+  - name: stg_activites
+    description: "Activités sportives nettoyées (anomalies filtrées, orthographe corrigée)."
+    columns:
+      - name: id_activite
+        description: "Identifiant unique de l'activité."
+        tests:
+          - unique
+          - not_null
+      - name: id_salarie
+        description: "Salarié ayant réalisé l'activité."
+        tests:
+          - not_null
+      - name: distance_km
+        description: "Distance parcourue en km (NULL pour sports sans distance)."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 100
+              row_condition: "distance_km is not null"
+      - name: duree_min
+        description: "Durée de l'activité en minutes (strictement positive)."
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 1
+              max_value: 600

@@ -1,0 +1,40 @@
+version: 2
+
+models:
+  - name: int_activites_par_salarie
+    description: "Agrégats d'activités par salarié sur 12 mois glissants."
+    columns:
+      - name: id_salarie
+        tests:
+          - unique
+          - not_null
+      - name: nb_activites
+        description: "Nombre d'activités sur 12 mois (base de l'éligibilité bien-être)."
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+  - name: int_coherence_deplacement
+    description: "Classification du mode de déplacement et plafond de distance applicable."
+    columns:
+      - name: id_salarie
+        tests:
+          - unique
+          - not_null
+      - name: mode_sportif
+        description: "Le mode de déplacement ouvre-t-il droit à la prime ?"
+        tests:
+          - not_null
+
+  - name: int_distances_domicile_travail
+    description: "Distances domicile-entreprise et respect du plafond par mode."
+    columns:
+      - name: id_salarie
+        tests:
+          - unique
+          - not_null
+      - name: distance_km
+        description: "Distance calculée (ORS ou fallback)."
+        tests:
+          - not_null

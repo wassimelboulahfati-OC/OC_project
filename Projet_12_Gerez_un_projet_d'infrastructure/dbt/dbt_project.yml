@@ -1,0 +1,40 @@
+name: 'sport_data_solution'
+version: '1.0.0'
+config-version: 2
+
+# Profil de connexion (défini dans profiles.yml)
+profile: 'sport_data_solution'
+
+# Chemins des différents composants
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# Variables métier paramétrables (recalcul rapide si les règles changent)
+vars:
+  taux_prime: 0.05          # 5 % du salaire brut annuel
+  seuil_jours_bien_etre: 15 # nb d'activités mini pour les 5 jours bien-être
+  nb_jours_bien_etre: 5     # nb de jours accordés
+  plafond_marche_km: 15     # distance max marche / course à pied
+  plafond_velo_km: 25       # distance max vélo / trottinette / autres
+  nb_jours_ouvres_an: 218   # base de calcul du coût d'une journée (standard FR)
+
+# Organisation des modèles par couche + schéma cible
+models:
+  sport_data_solution:
+    01_staging:
+      +schema: staging
+      +materialized: view
+    02_intermediate:
+      +schema: intermediate
+      +materialized: view
+    03_marts:
+      +schema: marts
+      +materialized: table
