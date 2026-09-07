@@ -1,0 +1,147 @@
+id: sport_data_pipeline
+namespace: sportdata
+
+description: |
+  Pipeline complet Sport Data Solution :
+  reset schémas -> load sources -> simulation activités -> Great Expectations
+  -> dbt run amont (jusqu'à int_coherence_deplacement) -> distances ORS
+  -> dbt run aval (marts) -> dbt test.
+
+variables:
+  runner_image: sds-runner:latest
+  docker_network: projet_12_gerez_un_projet_dinfrastructure_default
+
+tasks:
+  # 0) Remise à zéro des schémas dbt (rend le pipeline rejouable)
+  - id: reset_schemas
+    type: io.kestra.plugin.jdbc.postgresql.Queries
+    url: jdbc:postgresql://postgres_data:5432/sport_data
+    username: sds_admin
+    password: "{{ secret('DATA_DB_PASSWORD') }}"
+    sql: |
+      DROP SCHEMA IF EXISTS staging CASCADE;
+      DROP SCHEMA IF EXISTS intermediate CASCADE;
+      DROP SCHEMA IF EXISTS marts CASCADE;
+
+
+  # 1) Chargement des sources RH / Sport
+  - id: load_sources
+    type: io.kestra.plugin.scripts.python.Commands
+    containerImage: "{{ vars.runner_image }}"
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+      networkMode: "{{ vars.docker_network }}"
+    env:
+      DATA_DB_HOST: postgres_data
+      DATA_DB_PORT: "5432"
+      DATA_DB_NAME: sport_data
+      DATA_DB_USER: sds_admin
+      DATA_DB_PASSWORD: "{{ secret('DATA_DB_PASSWORD') }}"
+    commands:
+      - python /app/python/load_sources.py
+
+  # 2) Simulation des activités sportives
+  - id: simulate_activities
+    type: io.kestra.plugin.scripts.python.Commands
+    containerImage: "{{ vars.runner_image }}"
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+      networkMode: "{{ vars.docker_network }}"
+    env:
+      DATA_DB_HOST: postgres_data
+      DATA_DB_PORT: "5432"
+      DATA_DB_NAME: sport_data
+      DATA_DB_USER: sds_admin
+      DATA_DB_PASSWORD: "{{ secret('DATA_DB_PASSWORD') }}"
+    commands:
+      - python /app/python/simulate_activities.py
+
+  # 3) Barrière qualité Great Expectations
+  - id: great_expectations
+    type: io.kestra.plugin.scripts.python.Commands
+    containerImage: "{{ vars.runner_image }}"
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+      networkMode: "{{ vars.docker_network }}"
+    env:
+      DATA_DB_HOST: postgres_data
+      DATA_DB_PORT: "5432"
+      DATA_DB_NAME: sport_data
+      DATA_DB_USER: sds_admin
+      DATA_DB_PASSWORD: "{{ secret('DATA_DB_PASSWORD') }}"
+      GX_ANALYTICS_ENABLED: "false"
+    commands:
+      - python /app/python/great_expectations_checks.py
+
+  # 4) dbt run AMONT : staging + int_coherence_deplacement (nécessaire à ORS)
+  - id: dbt_run_amont
+    type: io.kestra.plugin.scripts.shell.Commands
+    containerImage: "{{ vars.runner_image }}"
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+      networkMode: "{{ vars.docker_network }}"
+    env:
+      DATA_DB_HOST: postgres_data
+      DATA_DB_PORT: "5432"
+      DATA_DB_NAME: sport_data
+      DATA_DB_USER: sds_admin
+      DATA_DB_PASSWORD: "{{ secret('DATA_DB_PASSWORD') }}"
+    commands:
+      - cd /app/dbt && dbt run --profiles-dir . --target dev --select +int_coherence_deplacement
+
+  # 5) Distances domicile -> entreprise via OpenRouteService
+  - id: ors_distances
+    type: io.kestra.plugin.scripts.python.Commands
+    containerImage: "{{ vars.runner_image }}"
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+      networkMode: "{{ vars.docker_network }}"
+    env:
+      DATA_DB_HOST: postgres_data
+      DATA_DB_PORT: "5432"
+      DATA_DB_NAME: sport_data
+      DATA_DB_USER: sds_admin
+      DATA_DB_PASSWORD: "{{ secret('DATA_DB_PASSWORD') }}"
+      ORS_API_KEY: "{{ secret('ORS_API_KEY') }}"
+      ORS_VERIFY_SSL: "false"
+    commands:
+      - python /app/python/ors_client.py
+
+  # 6) dbt run AVAL : tout le reste (distances, marts)
+  - id: dbt_run_aval
+    type: io.kestra.plugin.scripts.shell.Commands
+    containerImage: "{{ vars.runner_image }}"
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+      networkMode: "{{ vars.docker_network }}"
+    env:
+      DATA_DB_HOST: postgres_data
+      DATA_DB_PORT: "5432"
+      DATA_DB_NAME: sport_data
+      DATA_DB_USER: sds_admin
+      DATA_DB_PASSWORD: "{{ secret('DATA_DB_PASSWORD') }}"
+    commands:
+      - cd /app/dbt && dbt run --profiles-dir . --target dev
+
+  # 7) Tests dbt
+  - id: dbt_test
+    type: io.kestra.plugin.scripts.shell.Commands
+    containerImage: "{{ vars.runner_image }}"
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+      networkMode: "{{ vars.docker_network }}"
+    env:
+      DATA_DB_HOST: postgres_data
+      DATA_DB_PORT: "5432"
+      DATA_DB_NAME: sport_data
+      DATA_DB_USER: sds_admin
+      DATA_DB_PASSWORD: "{{ secret('DATA_DB_PASSWORD') }}"
+    commands:
+      - cd /app/dbt && dbt test --profiles-dir . --target dev
