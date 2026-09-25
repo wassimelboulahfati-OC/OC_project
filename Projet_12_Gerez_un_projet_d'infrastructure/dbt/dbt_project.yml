@@ -19,7 +19,7 @@ clean-targets:
 
 # Variables métier paramétrables (recalcul rapide si les règles changent)
 vars:
-  taux_prime: 0.05          # 5 % du salaire brut annuel
+  taux_prime: 0.1          # 5 % du salaire brut annuel
   seuil_jours_bien_etre: 15 # nb d'activités mini pour les 5 jours bien-être
   nb_jours_bien_etre: 5     # nb de jours accordés
   plafond_marche_km: 15     # distance max marche / course à pied
