@@ -15,7 +15,7 @@ Le besoin ne se limite pas à calculer ces montants une fois : il faut pouvoir *
 
 ### Deux exigences opérationnelles
 1. Un rapport Power BI de 3 pages (Synthèse, Éligibilité & répartition, Qualité des données).
-2. Un pipeline relançable à la demande.
+2. Un pipeline relançable à la demande
 
 ---
 
