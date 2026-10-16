@@ -37,6 +37,7 @@ services:
       POSTGRES_DB: ${DATA_DB_NAME}
       POSTGRES_USER: ${DATA_DB_USER}
       POSTGRES_PASSWORD: ${DATA_DB_PASSWORD}
+      SDS_APP_PASSWORD: ${SDS_APP_PASSWORD}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
       interval: 10s

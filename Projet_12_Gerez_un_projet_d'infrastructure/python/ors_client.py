@@ -58,7 +58,7 @@ ADRESSE_ENTREPRISE = "1362 Avenue des Platanes, 34970 Lattes, France"
 
 # Endpoints
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
-ORS_DIRECTIONS_URL = "https://api.heigit.org/openrouteservice/v2/directions/{profile}"
+ORS_DIRECTIONS_URL = "https://api.openrouteservice.org/v2/directions/{profile}"
 
 # User-Agent obligatoire pour Nominatim (identifie l'application)
 USER_AGENT = "sport-data-solution-poc/1.0 (contact: poc@sportdata.local)"
