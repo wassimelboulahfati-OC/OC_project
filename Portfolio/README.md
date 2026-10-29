@@ -14,7 +14,7 @@ Prérequis : **Python 3.10+**.
 
 ```powershell
 # 1. Se placer dans le dossier du portfolio
-cd C:\Users\42030172\OC_project\Portfolio
+cd OC_project/Portfolio
 
 # 2. Créer et activer un environnement virtuel
 python -m venv .venv
