@@ -35,18 +35,6 @@ Pour arrêter l'application : `Ctrl + C` dans le terminal.
 
 > Si `Activate.ps1` est bloqué par la politique d'exécution, lancer une fois : `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
 
-### En ligne (Streamlit Community Cloud, gratuit)
-
-Pour obtenir une URL publique à partager (CV, LinkedIn) :
-
-1. Pousser le dépôt sur GitHub (le dossier `Portfolio/` doit y figurer).
-2. Se connecter sur [share.streamlit.io](https://share.streamlit.io) avec son compte GitHub.
-3. **Create app** → choisir le dépôt et la branche `main`.
-4. **Main file path** : `Portfolio/app.py`.
-5. **Deploy**. L'URL publique est de la forme `https://<nom-choisi>.streamlit.app`.
-
-Aucun secret n'est nécessaire : l'application ne lit que des fichiers locaux.
-
 ---
 
 ## Contenu des pages
